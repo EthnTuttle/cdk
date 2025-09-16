@@ -128,6 +128,31 @@ impl Token {
             Self::TokenV4(token) => token.to_raw_bytes(),
         }
     }
+
+    /// Extract C values from all proofs for Kirk gaming protocol
+    /// Returns the unblinded signatures that provide randomness for game pieces
+    #[cfg(feature = "kirk")]
+    pub fn extract_c_values(&self, mint_keysets: &[KeySetInfo]) -> Result<Vec<[u8; 33]>, Error> {
+        let proofs = self.proofs(mint_keysets)?;
+        Ok(proofs.iter().map(|proof| proof.c_value_bytes()).collect())
+    }
+
+    /// Check if any proofs in this token have P2PK witnesses
+    #[cfg(feature = "kirk")]
+    pub fn has_p2pk_witnesses(&self, mint_keysets: &[KeySetInfo]) -> Result<bool, Error> {
+        let proofs = self.proofs(mint_keysets)?;
+        Ok(proofs.iter().any(|proof| proof.has_p2pk_witness()))
+    }
+
+    /// Extract all P2PK public keys from proofs that have P2PK witnesses
+    #[cfg(feature = "kirk")]
+    pub fn extract_p2pk_pubkeys(&self, mint_keysets: &[KeySetInfo]) -> Result<Vec<Vec<u8>>, Error> {
+        let proofs = self.proofs(mint_keysets)?;
+        Ok(proofs
+            .iter()
+            .filter_map(|proof| proof.extract_p2pk_pubkey())
+            .collect())
+    }
 }
 
 impl FromStr for Token {

@@ -17,6 +17,7 @@ mint = ["dep:uuid"]
 wallet = []
 auth = ["dep:strum", "dep:strum_macros", "dep:regex"]
 bench = []
+kirk = ["wallet"]  # Kirk gaming protocol extensions
 
 [dependencies]
 uuid = { workspace = true, optional = true }

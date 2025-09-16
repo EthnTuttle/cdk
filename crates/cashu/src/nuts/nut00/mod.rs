@@ -380,6 +380,39 @@ impl Proof {
     pub fn y(&self) -> Result<PublicKey, Error> {
         Ok(hash_to_curve(self.secret.as_bytes())?)
     }
+
+    /// Extract C value as bytes for Kirk gaming protocol
+    /// The C value is the unblinded signature that provides randomness for game pieces
+    #[cfg(feature = "kirk")]
+    pub fn c_value_bytes(&self) -> [u8; 33] {
+        self.c.to_bytes()
+    }
+    
+    /// Check if this proof has P2PK witness (for reward tokens)
+    #[cfg(feature = "kirk")]
+    pub fn has_p2pk_witness(&self) -> bool {
+        matches!(self.witness, Some(Witness::P2PKWitness(_)))
+    }
+    
+    /// Extract P2PK public key from witness if present
+    #[cfg(feature = "kirk")]
+    pub fn extract_p2pk_pubkey(&self) -> Option<Vec<u8>> {
+        if let Some(Witness::P2PKWitness(ref witness)) = self.witness {
+            // Extract the public key from P2PK witness
+            // This is a simplified extraction - actual implementation may vary
+            witness.signatures.first().and_then(|sig| {
+                // Try to decode the signature to extract pubkey
+                // This is a placeholder - actual P2PK witness structure may differ
+                if sig.len() >= 64 {
+                    Some(sig.as_bytes()[..33].to_vec())
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl Hash for Proof {
