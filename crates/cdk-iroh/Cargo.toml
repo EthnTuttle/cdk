@@ -1,0 +1,30 @@
+[package]
+name = "cdk-iroh"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage = "https://github.com/cashubtc/cdk"
+repository = "https://github.com/cashubtc/cdk.git"
+rust-version.workspace = true
+description = "Cashu CDK Iroh QUIC transport server"
+readme = "README.md"
+
+[features]
+default = []
+
+[dependencies]
+cdk = { workspace = true, features = ["mint"] }
+cdk-common = { workspace = true }
+iroh = "0.35"
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+futures = { workspace = true }
+bytes = "1"
+anyhow = { workspace = true }
+rand = "0.8"
+
+[lints]
+workspace = true

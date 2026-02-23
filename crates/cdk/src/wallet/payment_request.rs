@@ -182,6 +182,9 @@ impl Wallet {
                         Err(Error::HttpError(Some(status), body))
                     }
                 }
+                TransportType::Iroh => Err(Error::Custom(
+                    "Iroh transport for payment requests is not yet implemented".to_string(),
+                )),
             }
         } else {
             // If no transport is available, return an error instead of printing the token
