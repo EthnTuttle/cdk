@@ -421,10 +421,11 @@ impl PaymentRequest {
         }
 
         // In-band transport is represented by absence of transport tag (0x07)
-        // If we're here, we have a transport tag, so it must be nostr or http_post
+        // If we're here, we have a transport tag, so it must be nostr, http_post, or iroh
         let transport_type = match kind.ok_or(Error::InvalidStructure)? {
             0x00 => TransportType::Nostr,
             0x01 => TransportType::HttpPost,
+            0x02 => TransportType::Iroh,
             _ => return Err(Error::InvalidStructure),
         };
 
@@ -446,6 +447,7 @@ impl PaymentRequest {
                 }
             }
             TransportType::HttpPost => http_target.ok_or(Error::InvalidStructure)?,
+            TransportType::Iroh => http_target.ok_or(Error::InvalidStructure)?,
         };
 
         // Keep tags as-is per NUT-26 spec (no "r" to "relay" conversion)
@@ -480,6 +482,7 @@ impl PaymentRequest {
         let kind = match transport._type {
             TransportType::Nostr => 0x00u8,
             TransportType::HttpPost => 0x01u8,
+            TransportType::Iroh => 0x02u8,
         };
         writer.write_tlv(0x01, &[kind]);
 
@@ -527,6 +530,20 @@ impl PaymentRequest {
                 writer.write_tlv(0x02, transport.target.as_bytes());
 
                 // 0x03 tag_tuple: generic tuple (repeatable)
+                if let Some(ref tags) = transport.tags {
+                    for tag in tags {
+                        if !tag.is_empty() {
+                            let tag_bytes = Self::encode_tag_tuple(tag)?;
+                            writer.write_tlv(0x03, &tag_bytes);
+                        }
+                    }
+                }
+            }
+            TransportType::Iroh => {
+                // The target is the z32-encoded NodeId string.
+                writer.write_tlv(0x02, transport.target.as_bytes());
+
+                // Optional tag tuples (e.g. relay URLs).
                 if let Some(ref tags) = transport.tags {
                     for tag in tags {
                         if !tag.is_empty() {
