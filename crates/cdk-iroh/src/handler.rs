@@ -114,14 +114,19 @@ async fn handle_get_key_by_id(
     id: serde_json::Value,
 ) -> RpcResponse {
     /// Parameters for `cashu_getKeyById`.
+    ///
+    /// The client (IrohAsync transport) sends `{ "id": "..." }` matching the
+    /// URL path segment, so we accept either field name for compatibility.
     #[derive(serde::Deserialize)]
     struct Params {
-        keyset_id: Id,
+        /// Keyset ID — sent as `"id"` by the IrohAsync URL-to-method mapper.
+        #[serde(alias = "keyset_id")]
+        id: Id,
     }
 
     let p = parse_params!(params, Params, id);
 
-    match mint.keyset_pubkeys(&p.keyset_id) {
+    match mint.keyset_pubkeys(&p.id) {
         Ok(keys) => match serde_json::to_value(keys) {
             Ok(json) => RpcResponse::ok(id, json),
             Err(e) => RpcResponse::err(id, RPC_INTERNAL_ERROR, e.to_string()),
@@ -139,10 +144,47 @@ async fn handle_post_swap(
     run!(id, mint.process_swap_request(req))
 }
 
-/// Parameters for `cashu_getMintQuote` (create a new quote).
+/// `cashu_getMintQuote` — **check status** of an existing mint quote.
 ///
-/// `payment_method` defaults to `"bolt11"` when absent.
+/// This is triggered by `GET /v1/mint/quote/bolt11/{id}` from the IrohAsync
+/// URL mapper, which passes `{ "id": "<quote-id>", "payment_method": "bolt11" }`.
 async fn handle_get_mint_quote(
+    mint: &Arc<Mint>,
+    params: serde_json::Value,
+    id: serde_json::Value,
+) -> RpcResponse {
+    use cdk::mint::MintQuoteResponse;
+
+    #[derive(serde::Deserialize)]
+    struct Params {
+        /// The quote ID to look up (sent as `"id"` by the URL mapper).
+        id: QuoteId,
+    }
+
+    let p = parse_params!(params, Params, id);
+
+    match mint.check_mint_quote(&p.id).await {
+        Ok(resp) => {
+            let json_val = match resp {
+                MintQuoteResponse::Bolt11(r) => serde_json::to_value(r),
+                MintQuoteResponse::Bolt12(r) => serde_json::to_value(r),
+                MintQuoteResponse::Custom { response, .. } => serde_json::to_value(response),
+            };
+            match json_val {
+                Ok(v) => RpcResponse::ok(id, v),
+                Err(e) => RpcResponse::err(id, RPC_INTERNAL_ERROR, e.to_string()),
+            }
+        }
+        Err(e) => RpcResponse::err(id, RPC_INTERNAL_ERROR, e.to_string()),
+    }
+}
+
+/// `cashu_postMintQuote` — **create** a new mint quote.
+///
+/// This is triggered by `POST /v1/mint/quote/bolt11` from the IrohAsync
+/// URL mapper, which passes the full `MintQuoteBolt11Request` (or custom)
+/// as params.
+async fn handle_post_mint_quote(
     mint: &Arc<Mint>,
     params: serde_json::Value,
     id: serde_json::Value,
@@ -206,37 +248,6 @@ async fn handle_get_mint_quote(
     }
 }
 
-/// `cashu_postMintQuote` — check status of an existing mint quote.
-async fn handle_post_mint_quote(
-    mint: &Arc<Mint>,
-    params: serde_json::Value,
-    id: serde_json::Value,
-) -> RpcResponse {
-    use cdk::mint::MintQuoteResponse;
-
-    #[derive(serde::Deserialize)]
-    struct Params {
-        quote_id: QuoteId,
-    }
-
-    let p = parse_params!(params, Params, id);
-
-    match mint.check_mint_quote(&p.quote_id).await {
-        Ok(resp) => {
-            let json_val = match resp {
-                MintQuoteResponse::Bolt11(r) => serde_json::to_value(r),
-                MintQuoteResponse::Bolt12(r) => serde_json::to_value(r),
-                MintQuoteResponse::Custom { response, .. } => serde_json::to_value(response),
-            };
-            match json_val {
-                Ok(v) => RpcResponse::ok(id, v),
-                Err(e) => RpcResponse::err(id, RPC_INTERNAL_ERROR, e.to_string()),
-            }
-        }
-        Err(e) => RpcResponse::err(id, RPC_INTERNAL_ERROR, e.to_string()),
-    }
-}
-
 async fn handle_post_mint(
     mint: &Arc<Mint>,
     params: serde_json::Value,
@@ -246,8 +257,30 @@ async fn handle_post_mint(
     run!(id, mint.process_mint_request(req))
 }
 
-/// `cashu_getMeltQuote` — create a new melt quote.
+/// `cashu_getMeltQuote` — **check status** of an existing melt quote.
+///
+/// Triggered by `GET /v1/melt/quote/bolt11/{id}` from the IrohAsync URL mapper,
+/// which passes `{ "id": "<quote-id>", "payment_method": "bolt11" }`.
 async fn handle_get_melt_quote(
+    mint: &Arc<Mint>,
+    params: serde_json::Value,
+    id: serde_json::Value,
+) -> RpcResponse {
+    #[derive(serde::Deserialize)]
+    struct Params {
+        /// The melt quote ID (sent as `"id"` by the URL mapper).
+        id: QuoteId,
+    }
+
+    let p = parse_params!(params, Params, id);
+    run!(id, mint.check_melt_quote(&p.id))
+}
+
+/// `cashu_postMeltQuote` — **create** a new melt quote.
+///
+/// Triggered by `POST /v1/melt/quote/bolt11` from the IrohAsync URL mapper,
+/// which passes the full `MeltQuoteBolt11Request` (or custom) as params.
+async fn handle_post_melt_quote(
     mint: &Arc<Mint>,
     params: serde_json::Value,
     id: serde_json::Value,
@@ -288,21 +321,6 @@ async fn handle_get_melt_quote(
     };
 
     run!(id, mint.get_melt_quote(melt_request))
-}
-
-/// `cashu_postMeltQuote` — check status of an existing melt quote.
-async fn handle_post_melt_quote(
-    mint: &Arc<Mint>,
-    params: serde_json::Value,
-    id: serde_json::Value,
-) -> RpcResponse {
-    #[derive(serde::Deserialize)]
-    struct Params {
-        quote_id: QuoteId,
-    }
-
-    let p = parse_params!(params, Params, id);
-    run!(id, mint.check_melt_quote(&p.quote_id))
 }
 
 async fn handle_post_melt(

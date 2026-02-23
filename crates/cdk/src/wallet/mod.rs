@@ -73,6 +73,11 @@ pub use mint_connector::transport::Transport as HttpTransport;
 pub use mint_connector::{
     AuthHttpClient, HttpClient, LnurlPayInvoiceResponse, LnurlPayResponse, MintConnector,
 };
+/// Re-export the Iroh transport and related types for use by external crates.
+#[cfg(all(feature = "iroh", not(target_arch = "wasm32")))]
+pub use mint_connector::http_client::HttpClient as IrohMintClientBase;
+#[cfg(all(feature = "iroh", not(target_arch = "wasm32")))]
+pub use mint_connector::transport::iroh_transport::IrohAsync;
 #[cfg(feature = "nostr")]
 pub use nostr_backup::{BackupOptions, BackupResult, RestoreOptions, RestoreResult};
 pub use payment_request::CreateRequestParams;

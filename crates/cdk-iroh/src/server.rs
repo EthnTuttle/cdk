@@ -74,6 +74,21 @@ impl IrohMintServer {
         self.node_id
     }
 
+    /// Returns the full [`iroh::NodeAddr`] for this server, including direct socket
+    /// addresses.
+    ///
+    /// This is useful for local tests where the client and server are on the same
+    /// machine and there is no relay server to discover the server's addresses through.
+    /// Pass the returned `NodeAddr` to the client endpoint via
+    /// `Endpoint::add_node_addr` before attempting to connect.
+    pub async fn node_addr(&self) -> Result<iroh::NodeAddr, Error> {
+        self.router
+            .endpoint()
+            .node_addr()
+            .await
+            .map_err(|e| Error::Iroh(e.to_string()))
+    }
+
     /// Returns a human-readable `iroh://<z32-node-id>` URL.
     pub fn iroh_url(&self) -> String {
         format!("iroh://{}", self.node_id)

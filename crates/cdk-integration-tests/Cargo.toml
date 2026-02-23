@@ -12,6 +12,7 @@ rust-version.workspace = true                                                   
 
 [features]
 http_subscription = ["cdk/http_subscription"]
+iroh = ["cdk/iroh", "dep:cdk-iroh", "dep:iroh"]
 
 [dependencies]
 async-trait.workspace = true
@@ -28,6 +29,7 @@ cdk-axum = { workspace = true }
 cdk-sqlite = { workspace = true }
 cdk-redb = { workspace = true }
 cdk-fake-wallet = { workspace = true }
+cdk-iroh = { path = "../cdk-iroh", optional = true }
 cdk-common = { workspace = true, features = ["mint", "wallet", "http"] }
 cdk-http-client = { workspace = true }
 cdk-mintd = { workspace = true, features = ["cln", "lnd", "fakewallet", "grpc-processor", "lnbits", "management-rpc", "sqlite", "postgres", "ldk-node", "prometheus"] }
@@ -50,6 +52,7 @@ tower-service = "0.3.3"
 tokio-util.workspace = true
 bitcoin = "0.32.0"
 clap = { workspace = true, features = ["derive"] }
+iroh = { version = "0.35", optional = true }
 web-time.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
