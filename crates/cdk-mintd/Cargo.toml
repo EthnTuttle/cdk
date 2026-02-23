@@ -28,6 +28,8 @@ sqlcipher = ["sqlite", "cdk-sqlite/sqlcipher"]
 swagger = ["cdk-axum/swagger", "dep:utoipa", "dep:utoipa-swagger-ui"]
 redis = ["cdk-axum/redis"]
 prometheus = ["cdk/prometheus", "dep:cdk-prometheus", "cdk-sqlite?/prometheus", "cdk-axum/prometheus"]
+# Iroh QUIC transport
+iroh = ["dep:cdk-iroh"]
 
 [dependencies]
 anyhow.workspace = true
@@ -52,6 +54,7 @@ cdk-mint-rpc = { workspace = true, optional = true }
 cdk-payment-processor = { workspace = true, optional = true }
 config.workspace = true
 cdk-prometheus = { workspace = true, optional = true , features = ["system-metrics"]}
+cdk-iroh = { path = "../cdk-iroh", optional = true }
 clap.workspace = true
 bitcoin.workspace = true
 tokio = { workspace = true, default-features = false, features = ["signal"] }

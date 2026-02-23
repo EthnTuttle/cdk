@@ -1383,13 +1383,41 @@ pub async fn run_mintd_with_shutdown(
     let (mint_builder, auth_localstore) =
         setup_authentication(settings, work_dir, mint_builder, db_password).await?;
 
-    let config_mint_info = mint_builder.current_mint_info();
+    let mut config_mint_info = mint_builder.current_mint_info();
 
     let mint = build_mint(settings, keystore, mint_builder).await?;
 
     tracing::debug!("Mint built from builder.");
 
     let mint = Arc::new(mint);
+
+    // Start the Iroh QUIC transport server if enabled, and inject its
+    // `iroh://<node-id>` URL into MintInfo.urls so wallets can discover it.
+    #[cfg(feature = "iroh")]
+    if let Some(iroh_config) = &settings.iroh {
+        if iroh_config.enabled {
+            let iroh_server_config = cdk_iroh::IrohMintConfig {
+                identity_path: iroh_config.identity_path.clone(),
+            };
+            let iroh_server =
+                cdk_iroh::IrohMintServer::new(Arc::clone(&mint), iroh_server_config).await?;
+            let iroh_url = iroh_server.iroh_url();
+            tracing::info!("Iroh transport enabled. NodeId URL: {}", iroh_url);
+
+            // Append the iroh:// URL to MintInfo.urls
+            let urls = config_mint_info.urls.get_or_insert_with(Vec::new);
+            if !urls.contains(&iroh_url) {
+                urls.push(iroh_url);
+            }
+
+            // Spawn the Iroh accept loop in the background.
+            tokio::spawn(async move {
+                if let Err(e) = iroh_server.run().await {
+                    tracing::error!("Iroh server error: {}", e);
+                }
+            });
+        }
+    }
 
     start_services_with_shutdown(
         mint.clone(),

@@ -606,6 +606,20 @@ fn default_blind() -> AuthType {
     AuthType::Blind
 }
 
+/// Iroh QUIC transport configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Iroh {
+    /// Enable the Iroh QUIC transport listener.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Path to persist the Iroh Ed25519 identity key across restarts.
+    ///
+    /// If not set, a new key is generated on every start and the NodeId
+    /// will change between restarts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_path: Option<PathBuf>,
+}
+
 /// CDK settings, derived from `config.toml`
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
@@ -633,6 +647,10 @@ pub struct Settings {
     pub auth: Option<Auth>,
     #[cfg(feature = "prometheus")]
     pub prometheus: Option<Prometheus>,
+    /// Iroh QUIC transport configuration.
+    #[cfg(feature = "iroh")]
+    #[serde(default)]
+    pub iroh: Option<Iroh>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
