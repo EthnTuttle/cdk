@@ -18,6 +18,9 @@ pub enum TransportType {
     /// Http post
     #[serde(rename = "post")]
     HttpPost,
+    /// Iroh QUIC transport (target is a z32-encoded NodeId)
+    #[serde(rename = "iroh")]
+    Iroh,
 }
 
 impl fmt::Display for TransportType {
@@ -35,6 +38,7 @@ impl FromStr for TransportType {
         match s.to_lowercase().as_str() {
             "nostr" => Ok(Self::Nostr),
             "post" => Ok(Self::HttpPost),
+            "iroh" => Ok(Self::Iroh),
             _ => Err(Error::InvalidPrefix),
         }
     }
@@ -58,6 +62,18 @@ impl Transport {
     /// Create a new TransportBuilder
     pub fn builder() -> TransportBuilder {
         TransportBuilder::default()
+    }
+
+    /// Create an Iroh transport from a z32-encoded NodeId string.
+    ///
+    /// `relay_url` is optional; when provided it is encoded as a
+    /// `["relay", "<url>"]` tag as specified by NUT-18.
+    pub fn iroh(node_id_z32: impl Into<String>, relay_url: Option<String>) -> Self {
+        Transport {
+            _type: TransportType::Iroh,
+            target: node_id_z32.into(),
+            tags: relay_url.map(|r| vec![vec!["relay".to_string(), r]]),
+        }
     }
 }
 

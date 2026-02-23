@@ -203,3 +203,6 @@ impl Transport for Async {
 
 #[cfg(all(feature = "tor", not(target_arch = "wasm32")))]
 pub mod tor_transport;
+
+#[cfg(all(feature = "iroh", not(target_arch = "wasm32")))]
+pub mod iroh_transport;
